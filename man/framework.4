@@ -1,0 +1,151 @@
+.\" Copyright (c) 2025
+.\"     Chris Moerz <freebsd@ny-central.org>. All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. Neither the name of the University nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd March 1, 2025
+.Dt FRAMEWORK 4
+.Os
+.Sh NAME
+.Nm framework
+.Nd frame.work compatibility and systems driver
+.Sh SYNOPSIS
+System driver and optimization tweaks for
+frame.work notebooks.
+.Sh DESCRIPTION
+The
+.Nm
+driver provides system optimizations for use of FreeBSD
+on frame.work notebooks.
+.Pp
+Currently,
+.Nm
+provides one key functionality - dynamically dimming the screen when
+the computer is not used, and turning up brightness again once
+activity by the user is detected.
+.Pp
+.Nm
+keeps track of input signals through
+.Xr evdev 4
+and after a set timeout period, in which no input was detected, reduces
+screen brightness.
+Upon user input, it immediately increases screen brightness back to
+previous levels.
+.Pp
+Brightness levels for dimmed and bright state, as well as timeout
+settings (the length of time that needs to pass without any input
+signal before dimming the screen) can be customized through sysctls.
+Those values can be set differently for when the laptop runs on power
+outlet, or on battery.
+.Pp
+.Nm
+introduces the following sysctls, all found under the root node
+"hw.framework"; each of the following sysctls must therefore be
+prefixed with "hw.framework." to be accessed:
+.Pp
+.Bl -tag -width "hw.framework.devnode12345" -compact
+.It power.powermode
+(read-only) tells which power mode the module is operating in - either PWR for
+power outlet or BAT for battery mode
+.It screen.brightness_current
+(read-only) tells the currently active brightness level on a scale
+from 0 to 100
+.It dimblock
+can be used to block the driver from dimming the screen, i.e. while
+playing back a video.
+.Pp
+This value can only be incremented or decremented; it is not possible
+to set an absolute value.
+.Bl -bullet
+.It
+To increment the value, set any value >0.
+.It
+To decrement, set the value to 0.
+.El
+.Pp
+This allows you to wrap any video playback scripts with a sysctl
+command that increments or decrements this value, without having to
+consider how many video playback applications are active concurrently.
+.It screen.battery
+root node containing customization sysctls for BAT mode, active when
+laptop is running on battery
+.It screen.power
+root node containing customization sysctls for PWR mode, active when
+laptop is plugged into power outlet
+.El
+.Pp
+Both nodes - for BAT mode "hw.framework.screen.battery", and for PWR
+mode "hw.framework.screen.power", provide the following child nodes
+for further customization:
+.Pp
+.Bl -tag -width "hw.framework..." -compact
+.It timeout_secs
+number of seconds of inactivity until screen is dimmed
+.It brightness_high
+brightness level to set when system is in use and input is detected
+.It brightness_low
+brightness level when system is inactive and no input is detected, set
+after timeout_secs seconds of inactivity
+.El
+.Sh SEE ALSO
+.Xr acpiconf 8 ,
+.Xr backlight 8 ,
+.Xr drm 7 ,
+.Xr evdev 4 ,
+.Xr framework-dbus 1 ,
+.Xr kldload 8 ,
+.Xr kldunload 8 ,
+.Xr sysctl 8 ,
+.Sh HISTORY
+The
+.Nm
+driver first appeared in
+.Fx 13.2 .
+.Sh AUTHORS
+This manual page was written by Chris Moerz <freebsd@ny-central.og>.
+.Sh CAVEATS
+This driver requires recent drm-kmod drivers installed and enabled to
+work properly.
+.Pp
+Right now, the driver does not yet allow providing video playback
+hints, which will lead to reduced screen brightness during video
+playback.
+To avoid this, one may either unload the driver, or use the
+disable sysctl to temporarily disable screen dimming, for example
+through a script.
+.Sh BUGS
+.Pp
+The following bugs are known issues with the current version:
+.Bl -bullet
+.It
+This driver happens to work on non-frame.work devices.
+.It
+The dimblock sysctl can be set, but the driver does not (yet) respect it.
+.El
+.Sh NOTES
+The
+.Nm
+driver emerged as work product from the Laptop and Desktop Work Group
+in February 2025.
