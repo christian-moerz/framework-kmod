@@ -40,6 +40,7 @@
 #include <sys/conf.h>
 
 #include "framework_evdev_thread.h"
+#include "framework_sysctl.h"
 #include "framework_utils.h"
 
 #include <dev/evdev/evdev_private.h>

@@ -42,6 +42,7 @@
 #include "framework_callout.h"
 #include "framework_power.h"
 #include "framework_screen.h"
+#include "framework_sysctl.h"
 #include "framework_utils.h"
 
 struct framework_callout_t {

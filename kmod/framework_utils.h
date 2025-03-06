@@ -31,9 +31,9 @@
 #ifndef __FRAMEWORK_UTILS_H__
 #define __FRAMEWORK_UTILS_H__
 
-#define DEBUG(...) printf("framework: " __VA_ARGS__)
+#define DEBUG(...) if (framework_sysctl_debuglevel() >= 1) printf("framework: " __VA_ARGS__)
 #define ERROR(...) printf("framework: " __VA_ARGS__)
-#define TRACE(...) printf("framework: " __VA_ARGS__)
+#define TRACE(...) if (framework_sysctl_debuglevel() >= 2) printf("framework: " __VA_ARGS__)
 
 /* type definition for callback function */
 typedef int(*framework_cdev_cbmatch)(const char *devname, void *drv_data, void *ctx);

@@ -33,6 +33,8 @@
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
 
 #include "framework_state.h"
 
@@ -49,7 +51,19 @@ struct framework_sysctl_t {
 
 	/* Reference to state structure */
 	struct framework_state_t *state;
+
+	/* l - sysctl lock */
+	struct mtx lock;
+	
+	/* (l) debug flag */
+	uint8_t debug;
 };
+
+#define FRAMEWORK_SYSCTL_LOCK(x) mtx_lock(&(x)->lock);
+#define FRAMEWORK_SYSCTL_UNLOCK(x) mtx_unlock(&(x)->lock);
+
+/* Get current debug level */
+uint8_t framework_sysctl_debuglevel(void);
 
 /* initialize sysctls */
 int framework_sysctl_init(struct framework_sysctl_t *fsp,

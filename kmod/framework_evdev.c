@@ -35,6 +35,7 @@
 #include <sys/time.h>
 
 #include "framework_evdev.h"
+#include "framework_sysctl.h"
 #include "framework_utils.h"
 
 static const char *framework_evdev_devnames[] = {

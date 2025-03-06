@@ -53,6 +53,7 @@
 #include <dev/acpica/acpiio.h>
 
 #include "framework_power.h"
+#include "framework_sysctl.h"
 #include "framework_utils.h"
 
 static struct framework_power_t {
