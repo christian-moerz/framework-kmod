@@ -1,0 +1,14 @@
+**/.depend*
+**/*.o
+*.debug                                                                                                                                           
+*.full                                                                                                                                            
+*.gz                                                                                                                                              
+*.ko                                                                                                                                              
+kmod/*_if.h
+kmod/opt_*.h
+kmod/export_syms
+kmod/i386
+kmod/machine
+kmod/x86
+dbus/framework-dbus
+

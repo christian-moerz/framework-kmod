@@ -121,7 +121,7 @@ framework_init(void)
 	undo++; /* 4 == sysctl */
 	
 	error = framework_evdev_init();
-	
+	   
 	if (0 != error) {
 		ERROR("failed to initialize evdev - error %d\n",
 		       error);
@@ -182,7 +182,7 @@ framework_destroy(void)
 	
 	/* Stop and destroy event thread */
 	framework_evdev_destroy();
-	
+       
 	/* Destroy sysctls */
 	framework_sysctl_destroy(&framework_data.sysctl);
 

@@ -337,6 +337,8 @@ framework_callout_init(struct framework_screen_power_config_t *power_config)
 void
 framework_callout_destroy(struct framework_callout_t *co)
 {
+	TRACE("framework_callout_destroy begin\n");
+  
 	/* Clear interrupt callback */
 	framework_evdev_setintrfunc(NULL, NULL);
 	framework_callout_drop = 1;
@@ -347,7 +349,9 @@ framework_callout_destroy(struct framework_callout_t *co)
 	FRAMEWORK_CALLOUT_LOCK(co);
 	if (co->active) {
 		co->active = 0;
+		DEBUG("waking up callout thread\n");
 		wakeup(co);
+		DEBUG("awaiting callout thread shutdown - sleeping\n");
 		/* wait for thread to finish */
 		msleep(co, &co->lock, 0, "sigwait", 0);
 	}
@@ -356,4 +360,6 @@ framework_callout_destroy(struct framework_callout_t *co)
 	rw_destroy(&co->rwlock);
 	mtx_destroy(&co->lock);
 	free(co, M_FRAMEWORK);
+
+	TRACE("framework_callout_destroy end\n");
 }

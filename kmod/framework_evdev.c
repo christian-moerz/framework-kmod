@@ -39,6 +39,10 @@
 #include "framework_utils.h"
 
 static const char *framework_evdev_devnames[] = {
+	"TouchPad",
+	"Mouse",
+	"hmt0",
+	"hms0",
 	"sysmouse",
 	"kbdmux",
 	"psm",
@@ -130,7 +134,7 @@ framework_evdev_oninput(void *ctx)
  * and similar. This may lead to various timing conflicts.
  */
 static bool
-framework_evdev_matchname(const char *name)
+framework_evdev_matchname(const char *name, bool partial)
 {
 	if (NULL == name)
 		return false;
@@ -143,11 +147,20 @@ framework_evdev_matchname(const char *name)
 		       name, *strptr);
 		
 		slen = strlen(*strptr);
-		if (!strncmp(*strptr, name, slen))
+		
+		if (!partial && !strncmp(*strptr, name, slen)) {
+			TRACE("matchname precise OK\n");
 			return true;
+		}
+		if (partial && strnstr(*strptr, name, slen)) {
+			TRACE("matchname partial OK\n");
+			return true;
+		}
 		
 		strptr++;
 	}
+
+	TRACE("matchname NO\n");
 
 	return false;
 }
@@ -165,8 +178,10 @@ framework_evdev_matchdevs(const char *name,
 	
 	size_t buffer_size = devdata->ev_report_size * DEF_RING_REPORTS;
 
-	if (!framework_evdev_matchname(devdata->ev_shortname))
-		return 0;
+	if (!framework_evdev_matchname(devdata->ev_shortname, false)) {
+		if (!framework_evdev_matchname(devdata->ev_name, true))
+			return 0;
+	}
 	
 	struct framework_evdev_binding_t *binding =
 		malloc(sizeof(struct framework_evdev_binding_t),

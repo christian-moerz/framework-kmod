@@ -311,11 +311,12 @@ framework_sysctl_destroy(struct framework_sysctl_t *fsp)
 	if (NULL == fsp)
 		return 0;
 
-	mtx_destroy(&fsp->lock);
+	sysctl_cache = NULL;
   
 	int error = sysctl_ctx_free(&fsp->framework_sysctl_ctx);
 	
 	fsp->power_config = NULL;
+	mtx_destroy(&fsp->lock);
 	
 	return error;
 }
