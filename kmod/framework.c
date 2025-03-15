@@ -205,6 +205,9 @@ framework_destroy(void)
 	/* Destroy backlight system */
 	framework_bl_destroy();
 
+	/* Destroy key handler */
+	framework_keyhandler_destroy(framework_data.keyhandler);
+
 	/* Destroy power system */
 	framework_pwr_destroy();
 
