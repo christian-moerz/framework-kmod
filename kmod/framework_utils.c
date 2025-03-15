@@ -41,7 +41,45 @@
 #include <fs/devfs/devfs.h>
 #include <fs/devfs/devfs_int.h>
 
+#include "framework_power.h"
+#include "framework_screen.h"
 #include "framework_utils.h"
+
+/*
+ * Retrieve correct screen config to use in current operating mode
+ */
+int
+framework_util_getscreenconfig(struct framework_screen_power_config_t *power_config,
+			       struct framework_screen_config_t **screen_config)
+{
+	if (NULL == power_config) {
+		ERROR("power_config invalid!\n");
+	}
+	if (NULL == power_config->funcs.get_brightness_low) {
+		ERROR("power_config function get_brightness_low invalid\n");
+	}
+	if (NULL == power_config->funcs.get_brightness_high) {
+		ERROR("power_config function get_brightness_high invalid\n");
+	}
+	
+	switch (framework_pwr_getpowermode()) {
+	case BAT:
+		*screen_config = power_config->battery;
+		break;
+	case PWR:
+		*screen_config = power_config->power;
+		break;
+	case IVL:
+		ERROR("callout received invalid power mode\n");
+		return -1;
+	}
+
+	if (NULL == *screen_config) {
+		ERROR("invalid screen_config\n");
+		return -1;
+	}
+	return 0;
+}
 
 /*
  * Look up a character device node driver component

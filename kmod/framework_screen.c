@@ -34,12 +34,12 @@
 #define FRAMEWORK_SCREEN_LOCK(x) mtx_lock(&(x)->lock);
 #define FRAMEWORK_SCREEN_UNLOCK(x) mtx_unlock(&(x)->lock);
 
-#define FRAMEWORK_SCREEN_GETTER(config_name) \
-	static uint32_t \
+#define FRAMEWORK_SCREEN_GETTER(type_size, config_name)	\
+	static type_size \
 	framework_screen_get ## config_name (struct framework_screen_power_config_t *config, \
 					     struct framework_screen_config_t *screen_config) \
 	{								\
-		uint32_t result = 0;					\
+		type_size result = 0;					\
 									\
 		FRAMEWORK_SCREEN_LOCK(config);				\
 		result = screen_config->config_name;			\
@@ -47,19 +47,19 @@
 									\
 		return result;						\
 	}
-#define FRAMEWORK_SCREEN_SETTER(config_name) \
+#define FRAMEWORK_SCREEN_SETTER(type_size, config_name)	\
 	static void \
 	framework_screen_set ## config_name (struct framework_screen_power_config_t *config, \
 					     struct framework_screen_config_t *screen_config, \
-					     uint32_t new_value)	\
+					     type_size new_value)	\
 	{								\
 		FRAMEWORK_SCREEN_LOCK(config);				\
 		screen_config->config_name = new_value;			\
 		FRAMEWORK_SCREEN_UNLOCK(config);			\
 	}
-#define FRAMEWORK_SCREEN_SETGET(config_name) \
-	FRAMEWORK_SCREEN_GETTER(config_name) \
-		FRAMEWORK_SCREEN_SETTER(config_name)
+#define FRAMEWORK_SCREEN_SETGET(type_size, config_name)	\
+	FRAMEWORK_SCREEN_GETTER(type_size, config_name) \
+		FRAMEWORK_SCREEN_SETTER(type_size, config_name)
 
 
 /*
@@ -75,6 +75,10 @@ struct framework_screen_config_t {
 	 */
 	uint32_t timeout_secs;
 
+	/*
+	 * The number at which we increment or decrement brightness levels */
+	uint8_t increment_level;
+
 	/* back pointer to parent structure */
 	struct framework_screen_power_config_t *parent;
 };
@@ -85,9 +89,10 @@ struct framework_screen_data_t {
 	struct framework_screen_config_t battery;
 } framework_screen_data;
 
-FRAMEWORK_SCREEN_SETGET(brightness_low);
-FRAMEWORK_SCREEN_SETGET(brightness_high);
-FRAMEWORK_SCREEN_SETGET(timeout_secs);
+FRAMEWORK_SCREEN_SETGET(uint32_t, brightness_low);
+FRAMEWORK_SCREEN_SETGET(uint32_t, brightness_high);
+FRAMEWORK_SCREEN_SETGET(uint32_t, timeout_secs);
+FRAMEWORK_SCREEN_GETTER(uint8_t, increment_level);
 
 /*
  * Get parent of screen config
@@ -99,6 +104,63 @@ framework_screen_config_parent(struct framework_screen_config_t *screen_config)
 }
 
 /*
+ * Change the upper brightness level
+ */
+static int
+framework_screen_config_changebrightness(struct framework_screen_power_config_t *config,
+					 struct framework_screen_config_t *screen_config,
+					 int relative)
+{
+	uint32_t brightness = 0;
+
+	FRAMEWORK_SCREEN_LOCK(config);
+	brightness = screen_config->brightness_high;
+	FRAMEWORK_SCREEN_UNLOCK(config);
+	
+	if (relative < 0) {
+		/* we want to reduce the screen brightness */
+
+		/* we are already at the "bottom" */
+		if (0 == brightness)
+			return -1;
+		
+		if ((0 - relative) > brightness) {
+			/* we would reduce below zero, shich we cannot */
+			FRAMEWORK_SCREEN_LOCK(config);
+			screen_config->brightness_high = 0;
+			FRAMEWORK_SCREEN_UNLOCK(config);
+			return -1;
+		}
+
+		FRAMEWORK_SCREEN_LOCK(config);
+		screen_config->brightness_high += relative;
+		FRAMEWORK_SCREEN_UNLOCK(config);
+		return 0;
+	} else {
+		/* we want to increase the brightness */
+
+		/* we are already at the "top" */
+		if (100 == brightness)
+			return -1;
+
+		if ((brightness + relative) > 100) {
+			/* cap at a 100 */
+			FRAMEWORK_SCREEN_LOCK(config);
+			screen_config->brightness_high = 100;
+			FRAMEWORK_SCREEN_UNLOCK(config);
+			return -1;
+		}
+
+		FRAMEWORK_SCREEN_LOCK(config);
+		screen_config->brightness_high += relative;
+		FRAMEWORK_SCREEN_UNLOCK(config);
+		return 0;
+	}
+
+	return -1;
+}
+
+/*
  * Set up screen config structure with default values
  */
 int
@@ -107,10 +169,12 @@ framework_screen_init(struct framework_screen_power_config_t *config)
 	framework_screen_data.power.timeout_secs = 10;
 	framework_screen_data.power.brightness_low = 30;
 	framework_screen_data.power.brightness_high = 100;
+	framework_screen_data.power.increment_level = 10;
 
 	framework_screen_data.battery.timeout_secs = 10;
 	framework_screen_data.battery.brightness_low = 3;
 	framework_screen_data.battery.brightness_high = 40;
+	framework_screen_data.battery.increment_level = 10;
 
 	config->funcs.get_brightness_low = framework_screen_getbrightness_low;
 	config->funcs.set_brightness_low = framework_screen_setbrightness_low;
@@ -118,7 +182,9 @@ framework_screen_init(struct framework_screen_power_config_t *config)
 	config->funcs.set_brightness_high = framework_screen_setbrightness_high;
 	config->funcs.get_timeout_secs = framework_screen_gettimeout_secs;
 	config->funcs.set_timeout_secs = framework_screen_settimeout_secs;
-	
+	config->funcs.get_increment_level = framework_screen_getincrement_level;
+	config->funcs.change_rel_brightness = framework_screen_config_changebrightness;
+
 	mtx_init(&config->lock, "framework_screen", NULL, MTX_DEF);
 	FRAMEWORK_SCREEN_LOCK(config);
 	config->power = &framework_screen_data.power;

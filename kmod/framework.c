@@ -38,6 +38,7 @@
 #include "framework_evdev.h"
 #include "framework_backlight.h"
 #include "framework_callout.h"
+#include "framework_keyhandler.h"
 #include "framework_power.h"
 #include "framework_screen.h"
 #include "framework_sysctl.h"
@@ -60,6 +61,8 @@ struct framework_data_t {
 	struct framework_callout_t *callout;
 	/* state structure */
 	struct framework_state_t *state;
+	/* key handler */
+	struct framework_keyhandler_t *keyhandler;
 	/* module status (0 = start, 1 = init, 2 = deinit) */
 	int status;
 } framework_data;
@@ -95,8 +98,18 @@ framework_init(void)
 		ERROR("power init failure - error %d\n", error);
 		goto framework_errorexit;
 	}
-	
+
 	undo++; /* 2 == pwr */
+
+	/* Initialize key handler */
+	framework_data.keyhandler = framework_keyhandler_init(&framework_data.power_config);
+
+	if (0 == framework_data.keyhandler) {
+		ERROR("key handler init failure\n");
+		goto framework_errorexit;
+	}
+
+	undo++; /* 3 == keyhandler */
 
 	/* Initialize backlight system */
 	error = framework_bl_init();
@@ -106,7 +119,7 @@ framework_init(void)
 		goto framework_errorexit;
 	}
 	
-	undo++; /* 3 == bl */
+	undo++; /* 4 == bl */
 
 	/* Initialize sysctls */
 	error = framework_sysctl_init(&framework_data.sysctl,
@@ -118,7 +131,7 @@ framework_init(void)
 		goto framework_errorexit;
 	}
 	
-	undo++; /* 4 == sysctl */
+	undo++; /* 5 == sysctl */
 	
 	error = framework_evdev_init();
 	   
@@ -128,9 +141,10 @@ framework_init(void)
 		goto framework_errorexit;
 	}
 	
-	undo++; /* 5 == evdev */
+	undo++; /* 6 == evdev */
 
-	framework_data.callout = framework_callout_init(&framework_data.power_config);
+	framework_data.callout = framework_callout_init(&framework_data.power_config,
+							framework_data.keyhandler);
 	if (NULL == framework_data.callout) {
 		ERROR("failed to initialize callout - error %d\n", ENXIO);
 		error = (ENXIO);
@@ -144,13 +158,15 @@ framework_init(void)
 framework_errorexit:
 	switch (undo)
 	{
+	case 7:
 	case 6:
-	case 5:
 		framework_evdev_destroy();
-	case 4:
+	case 5:
 		framework_sysctl_destroy(&framework_data.sysctl);
-	case 3:
+	case 4:
 		framework_bl_destroy();
+	case 3:
+		framework_keyhandler_destroy(framework_data.keyhandler);
 	case 2:
 		framework_pwr_destroy();
 	case 1:

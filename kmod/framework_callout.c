@@ -35,11 +35,11 @@
 #include <sys/mutex.h>
 #include <sys/lock.h>
 #include <sys/rwlock.h>
-#include <sys/callout.h>
 
 #include "framework_backlight.h"
 #include "framework_evdev.h"
 #include "framework_callout.h"
+#include "framework_keyhandler.h"
 #include "framework_power.h"
 #include "framework_screen.h"
 #include "framework_sysctl.h"
@@ -58,6 +58,9 @@ struct framework_callout_t {
 	
 	struct mtx lock;                  /* l - structure and callout lock */
 	struct rwlock rwlock;             /* r - rwlock for internal vars */
+
+	/* Key handler reference */
+	struct framework_keyhandler_t *keyhandler;
 };
 
 #define FRAMEWORK_CALLOUT_LOCK(x) mtx_lock(&(x)->lock)
@@ -82,32 +85,10 @@ framework_callout_getbrightnessfor(struct framework_callout_t *co)
 	struct framework_screen_config_t *screen_config = NULL;
 	uint32_t brightness = 0;
 
-	if (NULL == co->power_config) {
-		ERROR("power_config invalid!\n");
-	}
-	if (NULL == co->power_config->funcs.get_brightness_low) {
-		ERROR("power_config function get_brightness_low invalid\n");
-	}
-	if (NULL == co->power_config->funcs.get_brightness_high) {
-		ERROR("power_config function get_brightness_high invalid\n");
-	}
+	/* if we can't establish anything, go to full brightness */
+	if (framework_util_getscreenconfig(co->power_config, &screen_config))
+		return 100; 
 	
-	switch (framework_pwr_getpowermode()) {
-	case BAT:
-		screen_config = co->power_config->battery;
-		break;
-	case PWR:
-		screen_config = co->power_config->power;
-		break;
-	case IVL:
-		ERROR("callout received invalid power mode\n");
-		return -1;
-	}
-
-	if (NULL == screen_config) {
-		ERROR("invalid screen_config\n");
-	}
-
 	FRAMEWORK_CALLOUT_RLOCK(co);
 	switch (co->current_level) {
 	case DIM:
@@ -173,7 +154,7 @@ framework_callout_getcurrenttimeout(struct framework_callout_t *co)
  * Called when input interrupt is received
  */
 static void
-framework_callout_inputintr(void *ctx)
+framework_callout_inputintr(void *ctx, uint16_t *keycode)
 {
 	struct framework_callout_t *co = ctx;
 	uint32_t brightness = 0;
@@ -193,6 +174,10 @@ framework_callout_inputintr(void *ctx)
 	FRAMEWORK_CALLOUT_WUNLOCK(co);
 	brightness = framework_callout_getbrightnessfor(co);
 	TRACE("callout unlocked\n");
+
+	/* if we have a keycode, we forward to keyhandler */
+	if (keycode && co->keyhandler)
+		framework_keyhandler_handlekey(co->keyhandler, *keycode);
 
 	framework_bl_setbrightness(brightness);
 
@@ -300,7 +285,8 @@ framework_callout_thread(void *ptr)
  * Initialize a new callout handler
  */
 struct framework_callout_t *
-framework_callout_init(struct framework_screen_power_config_t *power_config)
+framework_callout_init(struct framework_screen_power_config_t *power_config,
+		       struct framework_keyhandler_t *keyhandler)
  {
 	struct framework_callout_t *co = NULL;
 	uint32_t brightness = 0;
@@ -309,6 +295,7 @@ framework_callout_init(struct framework_screen_power_config_t *power_config)
 		    M_FRAMEWORK, M_WAITOK | M_ZERO);
 
 	co->power_config = power_config;
+	co->keyhandler = keyhandler;
 	co->active = 1;
 
 	mtx_init(&co->lock, "framework_callout", NULL, MTX_DEF);

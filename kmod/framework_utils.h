@@ -31,9 +31,15 @@
 #ifndef __FRAMEWORK_UTILS_H__
 #define __FRAMEWORK_UTILS_H__
 
+#include "framework_screen.h"
+
 #define DEBUG(...) if (framework_sysctl_debuglevel() >= 1) printf("framework: " __VA_ARGS__)
 #define ERROR(...) printf("framework: " __VA_ARGS__)
 #define TRACE(...) if (framework_sysctl_debuglevel() >= 2) printf("framework: " __VA_ARGS__)
+
+/* get correct screen config */
+int framework_util_getscreenconfig(struct framework_screen_power_config_t *power_config,
+				   struct framework_screen_config_t **screen_config);
 
 /* type definition for callback function */
 typedef int(*framework_cdev_cbmatch)(const char *devname, void *drv_data, void *ctx);

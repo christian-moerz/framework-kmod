@@ -31,6 +31,7 @@
 #ifndef __FRAMEWORK_CALLOUT_H__
 #define __FRAMEWORK_CALLOUT_H__
 
+#include "framework_keyhandler.h"
 #include "framework_screen.h"
 
 enum framework_callout_brightmode_t {
@@ -42,7 +43,8 @@ struct framework_callout_t;
 
 /* Initialize a new callout helper */
 struct framework_callout_t *framework_callout_init(struct framework_screen_power_config_t
-						   *power_config);
+						   *power_config,
+						   struct framework_keyhandler_t *keyhandler);
 
 /* Destroy framework handler */
 void framework_callout_destroy(struct framework_callout_t *co);

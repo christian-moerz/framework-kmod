@@ -77,12 +77,40 @@ struct framework_evdev_thread_t {
 MALLOC_DECLARE(M_FRAMEWORK);
 
 /*
+ * attempts to read key code, returns true on success
+ */
+static bool
+framework_evthread_readkeycode(struct evdev_client *client,
+			       uint16_t *keycode)
+{
+	if (!client->ec_buffer[client->ec_buffer_head].value)
+		return false;
+	if (!client->ec_buffer[client->ec_buffer_head].code)
+		return false;
+
+	*keycode = client->ec_buffer[client->ec_buffer_head].code;
+	return true;
+}
+
+/*
  * Clean up kqueue
  */
 static void
 framework_evthread_clearkqueue(struct evdev_client *client)
 {
 	TRACE("evdev thread clear kqueue begin\n");
+	/* analyze contents of buffer */
+	/*
+	 * code == 224 brightness lower,
+	 * code == 225 brightness upper,
+	 * value = 1 press down
+	 * value = 0 press up
+	 */
+	TRACE("evdev thread event type=%d, code=%d, value=%d\n",
+	      client->ec_buffer[client->ec_buffer_head].type,
+	      client->ec_buffer[client->ec_buffer_head].code,
+	      client->ec_buffer[client->ec_buffer_head].value);
+	
 	client->ec_buffer_head = client->ec_buffer_tail =
 		client->ec_buffer_ready = 0;
 	client->ec_clock_id = 0;
@@ -118,6 +146,8 @@ framework_evthread_func(void *data)
 	uint8_t local_active = true;
 	int error = 0;
 	framework_evdev_thread_cbfunc local_cbfunc;
+	uint16_t keycode = 0;
+	bool have_keycode = false;
 
 	TRACE("Started evdev thread with edata = %p.\n", edata);
 
@@ -147,6 +177,9 @@ framework_evthread_func(void *data)
 		if (0 != error) {
 			ERROR("failed to mutex sleep in thread");
 		} else {
+			/* read any relevant keycode first */
+			have_keycode = framework_evthread_readkeycode(edata->evdev_client, &keycode);
+			
 			/* reset buffer position and clear kqueue */
 			framework_evthread_clearkqueue(edata->evdev_client);
 			
@@ -161,7 +194,8 @@ framework_evthread_func(void *data)
 				/* direct to callback function */
 				TRACE("evdev thread callback begin\n");
 				FRAMEWORK_EVTHREAD_UNLOCK(edata);
-				edata->cbfunc(edata->ctx);
+				edata->cbfunc(edata->ctx,
+					      have_keycode ? &keycode : NULL);
 				FRAMEWORK_EVTHREAD_LOCK(edata);
 				TRACE("evdev thread callback end\n");
 			}

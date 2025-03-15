@@ -41,6 +41,7 @@
 static const char *framework_evdev_devnames[] = {
 	"TouchPad",
 	"Mouse",
+	"hcons0",
 	"hmt0",
 	"hms0",
 	"sysmouse",
@@ -100,7 +101,7 @@ framework_evdev_getlastinput(void)
  * Called when input is received
  */
 static void
-framework_evdev_oninput(void *ctx)
+framework_evdev_oninput(void *ctx, uint16_t *keycode)
 {
 	struct framework_evdev_t *edata = ctx;
 	framework_evdev_intrfunc local_cbfunc = NULL;
@@ -123,7 +124,7 @@ framework_evdev_oninput(void *ctx)
 
 	if (local_cbfunc) {
 		TRACE("calling evdev callback at %p\n", local_cbfunc);
-		local_cbfunc(local_ctx);
+		local_cbfunc(local_ctx, keycode);
 	}
 }
 

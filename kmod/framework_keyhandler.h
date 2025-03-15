@@ -28,49 +28,21 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __FRAMEWORK_EVDEV_H__
-#define __FRAMEWORK_EVDEV_H__
+#ifndef __FRAMEWORK_KEYHANDLER__
+#define __FRAMEWORK_KEYHANDLER__
 
-#include <sys/types.h>
-#include <sys/malloc.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/lock.h>
-#include <sys/mutex.h>
-#include <sys/kthread.h>
-#include <sys/systm.h>
-#include <sys/proc.h>
-#include <sys/queue.h>
+#include "framework_screen.h"
 
-#include "framework_evdev_thread.h"
+struct framework_keyhandler_t;
 
-/*
- * Callback prototype for interrupt function
- */
-typedef void(*framework_evdev_intrfunc)(void *, uint16_t *);
+/* Initialize a new keyhandler */
+struct framework_keyhandler_t *
+framework_keyhandler_init(struct framework_screen_power_config_t *power_config);
 
-/*
- * A bound evdev device
- */
-struct framework_evdev_binding_t {
-	struct framework_evdev_thread_t *listener_thread;
-	struct evdev_dev *evdev_device;
+/* Destroy previously allocated keyhandler */
+void framework_keyhandler_destroy(struct framework_keyhandler_t *kh);
 
-	LIST_ENTRY(framework_evdev_binding_t) entries;
-};
+/* Handles a keypress */
+int framework_keyhandler_handlekey(struct framework_keyhandler_t *kh, uint32_t key_in);
 
-struct framework_evdev_t;
-
-/* Initialize evdev system */
-int framework_evdev_init(void);
-
-/* Get boot time seconds when last input occurred */
-time_t framework_evdev_getlastinput(void);
-
-/* Set interrupt callback function */
-void framework_evdev_setintrfunc(framework_evdev_intrfunc cbfunc, void *);
-
-/* Destroy evdev system */
-int framework_evdev_destroy(void);
-
-#endif /* __FRAMEWORK_EVDEV_H__ */
+#endif /* __FRAMEWORK_KEYHANDLER__ */

@@ -16,6 +16,7 @@ SRCS=	\
 	framework_power.c \
 	framework_screen.c \
 	framework_callout.c \
+	framework_keyhandler.c \
 	framework.c
 
 etags:

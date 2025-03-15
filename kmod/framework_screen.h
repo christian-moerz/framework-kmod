@@ -54,6 +54,8 @@ struct framework_screen_power_config_funcs_t {
 				       struct framework_screen_config_t *);
 	uint32_t(*get_timeout_secs)(struct framework_screen_power_config_t *,
 				       struct framework_screen_config_t *);
+	uint8_t(*get_increment_level)(struct framework_screen_power_config_t *,
+				       struct framework_screen_config_t *);
 	void(*set_brightness_low)(struct framework_screen_power_config_t *,
 				  struct framework_screen_config_t *,
 				  uint32_t);
@@ -63,6 +65,8 @@ struct framework_screen_power_config_funcs_t {
 	void(*set_timeout_secs)(struct framework_screen_power_config_t *,
 				struct framework_screen_config_t *,
 				uint32_t);
+	int(*change_rel_brightness)(struct framework_screen_power_config_t *,
+				    struct framework_screen_config_t *, int);
 };
 
 struct framework_screen_power_config_t {

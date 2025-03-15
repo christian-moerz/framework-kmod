@@ -39,7 +39,7 @@
 struct framework_evdev_thread_t;
 
 /* callback method on input event */
-typedef void(*framework_evdev_thread_cbfunc)(void *);
+typedef void(*framework_evdev_thread_cbfunc)(void *, uint16_t *);
 
 /* Initialize event thread */
 struct framework_evdev_thread_t *framework_evthread_init(size_t, struct evdev_dev *, void *);
